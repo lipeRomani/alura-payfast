@@ -1,5 +1,3 @@
-var calculator = require('../helpers/calculator')();
-
 module.exports = (app) => {
 
     app.get('/payment', (req, res) => {
@@ -7,10 +5,23 @@ module.exports = (app) => {
     });
 
     app.post('/payment/pay', (req, res) => {
-        console.log(req.body);
-        const {value, currency} = req.body;
+        const payment = req.body;
+        payment.status = 'Created';
+        payment.date = new Date;
 
-        const total = calculator(value, 10);
-        res.send(`Pagamento com juros no valor de ${total}`);
+        const conn = app.persistence.connectionFactory;
+        const dao  = new app.persistence.PaymentDao(conn);
+        
+        dao.insert(payment)
+            .then(result => {
+                return dao.findById(result.insertId);
+            })
+            .then(payment => {
+                res.json(payment);
+            })
+            .catch(err => {
+                console.log(`Error Occurred: ${err.message}`)
+                res.json({error : err.message});
+            });
     });
 }
